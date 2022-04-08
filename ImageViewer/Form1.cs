@@ -5,16 +5,21 @@ using System.Threading;
 using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using Windows.Devices.Enumeration;
+using Windows.Media.Capture;
 
 namespace ImageViewer
 {
     public partial class Form1 : Form
     {
         private readonly VideoCapture capture;
+        bool loop;
+
         public Form1()
         {
             InitializeComponent();
             capture = new VideoCapture();
+            loop = true;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -22,22 +27,27 @@ namespace ImageViewer
             capture.Open(0, VideoCaptureAPIs.ANY);
             if (!capture.IsOpened())
             {
-                Close();
                 return;
             }
             ClientSize = new System.Drawing.Size(capture.FrameWidth, capture.FrameHeight);
-            backgroundWorker1.RunWorkerAsync();
+            Run();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            backgroundWorker1.CancelAsync();
+            loop = false;
             capture.Dispose();
         }
 
-        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        private async void Run()
         {
-            while(true)
+            var task = Task.Run(() => CaptureAsync());
+            await task;
+        }
+
+        private void CaptureAsync()
+        {
+            while (loop)
             {
                 using (var frameMat = capture.RetrieveMat())
                 {
